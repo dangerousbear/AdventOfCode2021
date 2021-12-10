@@ -16,7 +16,7 @@ def hasBingo(indices):
         
         if (lastValue + 1 == i):
             numTrailingValues += 1
-            if (numTrailingValues == 5 and i % 5 == 4):
+            if (numTrailingValues >= 4 and i % 5 == 4):
                 return True
         else:
             numTrailingValues = 0
@@ -36,11 +36,8 @@ for i in range(1, len(lines)):
         for token in line.split():
             bingoTiles[-1].append(int(token))
 
-indicesOfMarkedTiles = []
-
-nTiles = len(bingoTiles)
+indicesOfMarkedTiles = [] 
 for tile in bingoTiles:
-    assert(len(tile) == L * L)
     indicesOfMarkedTiles.append([])
 
 lastNumber = -1
@@ -49,16 +46,19 @@ for n in drawnNumbers:
     if (len(bingoTiles) == 0):
         break
     print(len(bingoTiles))
-    for i in range(len(bingoTiles)):
+    print("num " + str(n))
+    for i in range(len(bingoTiles))[::-1]:
         if (i >= len(bingoTiles)):
             break
         tile = bingoTiles[i]
         try:
             indicesOfMarkedTiles[i].append(tile.index(n))
+            print("Appending " + str(tile.index(n)))
             indicesOfMarkedTiles[i].sort()
         except ValueError:
             pass
         if (hasBingo(indicesOfMarkedTiles[i])):
+            print("Bingo for tile " + str(tile))
             numBingos += 1
             if (len(bingoTiles) == 1):
                 lastNumber = n
