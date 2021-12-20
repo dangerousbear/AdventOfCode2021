@@ -33,20 +33,3 @@ for c in nPerChar: #Remove doubles
     nPerChar[c] = -(-nPerChar[c] // 2)
 
 print(nPerChar[max(nPerChar, key=nPerChar.get)]  - nPerChar[min(nPerChar, key=nPerChar.get)])
-
-
-# Slow solution (part 1)
-# def evolve(s):
-#     newS = ""
-#     for i in range(1, len(s)):
-#         pair =  s[i-1] + s[i]
-#         # print("considering pair " + pair)
-       
-#         newS += s[i-1] + rules[pair] if pair in rules else s[i-1]
-#         # print(newS)
-#     # print(newS)
-#     return newS + s[-1]
-
-# for n in range(40):
-#     s = evolve(s)
-#     # print(len(s))
