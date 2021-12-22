@@ -13,7 +13,7 @@ for line in lines:
     yLims.append([int(y) for y in toks[1][2:].split("..")])
     zLims.append([int(z) for z in toks[2][2:].split("..")])
 
-@dataclass
+@dataclass(frozen=True, eq=True)
 class Box:
     x1: int
     x2: int
@@ -42,9 +42,10 @@ class Box:
     
     def volume(self):
         return (self.x2 - self.x1 + 1)*(self.y2 - self.y1 + 1)*(self.z2 - self.z1 + 1)
+def addToDict(k, v, d):
+    d[k] = d[k] + v if k in d else v
 
-boxes = []
-weights = []
+box2Weight = dict()
 for i in range(len(onOff)):
     print("i ", i)
     newBox = Box(xLims[i][0], xLims[i][1], yLims[i][0], yLims[i][1], zLims[i][0], zLims[i][1])
@@ -52,33 +53,22 @@ for i in range(len(onOff)):
     
     intersections = []
     iWeights = []
-    for i, b in enumerate(boxes):
+    for b in box2Weight:
         intersection = newBox.getIntersectionBox(b)
         if intersection is not None:
             intersections.append(intersection)
-            if weight > 0:
-                iWeights.append(-1 if weights[i] > 0 else 1)
-            else:
-                iWeights.append(-1 if weights[i] > 0 else 1)
+            iWeights.append(-1 if box2Weight[b] > 0 else 1)
+
             
     for i, b in enumerate(intersections):
-        if b in boxes:
-            weights[boxes.index(b)] += iWeights[i]
-        else:
-            boxes.append(b)
-            weights.append(iWeights[i])
+        addToDict(b, iWeights[i], box2Weight)
+    
     if (weight > 0):
-        if newBox in boxes:
-            weights[boxes.index(newBox)] += weight
-        else:
-            boxes.append(newBox)
-            weights.append(weight)
-    zeroWeightIndices = [i for i in range(len(weights)) if weights[i] == 0]
-    zeroWeightIndices.reverse()
-    for i in zeroWeightIndices:
-        weights.pop(i)
-        boxes.pop(i)
+        addToDict(newBox, weight, box2Weight)
+    
+    box2Weight = {x:y for x,y in box2Weight.items() if y != 0}
     
 volume = 0
-for i, b in enumerate(boxes):
-    volume += weights[i] * b.volume()
+for b in box2Weight:
+    volume += box2Weight[b] * b.volume()
+print(volume)
