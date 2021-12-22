@@ -21,10 +21,7 @@ class Box:
     y2: int
     z1: int
     z2: int
-    
-    # def intersects(self, c):
-    #     return (c.x2 > self.x1 or c.x1 > self.x2 and c.y2 > self.y1 or c.y1 > self.y2 and c.z2 > self.z1 or c.z1 > self.z2
-    
+
     def contains(self, c):
         xContains = c.x1 >= self.x1 and c.x2 <= self.x2
         yContains = c.y1 >= self.y1 and c.y2 <= self.y2
@@ -47,28 +44,19 @@ def addToDict(k, v, d):
 
 box2Weight = dict()
 for i in range(len(onOff)):
-    print("i ", i)
     newBox = Box(xLims[i][0], xLims[i][1], yLims[i][0], yLims[i][1], zLims[i][0], zLims[i][1])
     weight = 1 if onOff[i] else -1
     
-    intersections = []
-    iWeights = []
+    newB2W = dict()
     for b in box2Weight:
         intersection = newBox.getIntersectionBox(b)
         if intersection is not None:
-            intersections.append(intersection)
-            iWeights.append(-1 if box2Weight[b] > 0 else 1)
-
-            
-    for i, b in enumerate(intersections):
-        addToDict(b, iWeights[i], box2Weight)
-    
+            addToDict(intersection, -1 if box2Weight[b] > 0 else 1, newB2W)
+    for b,w in newB2W.items():
+        addToDict(b, w, box2Weight)
     if (weight > 0):
         addToDict(newBox, weight, box2Weight)
     
     box2Weight = {x:y for x,y in box2Weight.items() if y != 0}
     
-volume = 0
-for b in box2Weight:
-    volume += box2Weight[b] * b.volume()
-print(volume)
+print(sum( w * b.volume() for b, w in box2Weight.items()))
