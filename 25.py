@@ -84,9 +84,6 @@ def genMoves(p):
             if k in p:
                 break
             addMoves(k,accCost)
-    for m in moves:
-        if m[1] > L:
-            return [m] # If we can move to burrow, discard other moves (will be re-generated in next step)
     return moves
                
                 
