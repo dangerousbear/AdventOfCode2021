@@ -1,106 +1,207 @@
-letterOrder = open("23.txt", "r").read().replace("\n", "").replace(".","").replace("#", "").replace(" ","")
-L = 11
-
-startConfig = ()
-for c in ["A", "B", "C", "D"]:
-    startConfig += tuple(sorted([L+i for i,x in enumerate(letterOrder) if x == c]))
-
-allowedUpperPositions = [0,1,3,5,7,9,10]
-
-def getStepsUp(pos):
-        if pos >= L:
-            if pos < L + 4:
-                return 1
-            elif pos < L + 8:
-                return 2
-            elif pos < L + 12:
-                return 3        
-            return 4
-        return 0
+import operator as op
+lines = open("24.txt", "r").readlines()
+# for line in lines:
+#     print(line)
+    
+def addToDict(k, v, d):
+    d[k] = d[k] + v if k in d else v
+ops = {"add": op.add, "mul": op.mul, "div": (lambda a,b : a // b), "mod" : (lambda a,b : a % b ), "eql" : (lambda a,b : int(a==b))}
 
 
-def genMoves(p):
-    moves = []
-    freeTokens = [i for i, tok in enumerate(p) if (tok < L+4 or tok-4 not in p)]
-    for i in freeTokens:
-        ri = i // 4
-        goalPos0 = L + ri
-        goalPos1 = goalPos0 + 4
-        goalPos2 = goalPos1 + 4
-        goalPos3 = goalPos2 + 4
-        
-        #Check if goals are filled
-        g1 = goalPos1 in p
-        g2 = goalPos2 in p
-        g3 = goalPos3 in p
-        c1 = g1 and p.index(goalPos1) // 4 == ri
-        c2 = g2 and p.index(goalPos2) // 4 == ri
-        c3 = g3 and p.index(goalPos3) // 4 == ri
-        
-        if (p[i] == goalPos3 or p[i] == goalPos2 and c3
-            or (p[i] == goalPos1 and c2 and c3)
-            or (p[i] == goalPos0 and  c1 and c2 and c3)):
-            continue
-        c = 10**(i // 4)
-        
-        stepsUp = getStepsUp(p[i])
 
-        #Logic:
-        # If free upper position, add move
-        # If free goal position and lower goal positions are correct, add move
-        # If collision, break
-        
-        def addMoves(k, accCost):
-            if not stepsUp == 0 and k in allowedUpperPositions:
-                moves.append((i, k, accCost))
-            if k == (goalPos0 - L + 1) * 2 and goalPos0 not in p:
-                if not g3:
-                    moves.append((i, goalPos3, accCost + 4*c))
-                elif c3:
-                    if not g2:
-                        moves.append((i, goalPos2, accCost + 3*c))
-                    elif c2:
-                        if not g1:
-                            moves.append((i, goalPos1, accCost + 2*c))
-                        elif c1:
-                            moves.append((i, goalPos0, accCost + c))
-        
-        startPos = p[i] if stepsUp == 0 else (p[i] - (stepsUp - 1) * 4 - L + 1) * 2 
-        k = startPos
-        accCost = c * stepsUp
-        while(k < L):
-            k+=1
-            accCost += c
-            if k in p:
-                break
-            addMoves(k,accCost)
+var2Idx = {"x" : 0, "y" : 1, "z" : 2, "w" : 3}
 
-                
-        k = startPos
-        accCost = c * stepsUp
-        while(k > 0):
-            k-=1
-            accCost += c
-            if k in p:
-                break
-            addMoves(k,accCost)
-    return moves
-               
-                
-        
-costMap = dict()
-def search(p, cost):
-    if p in costMap and costMap[p] <= cost:
+
+occurenceVar2Deps = []
+
+refSeq = lines[0:18]
+
+
+xOffsets = []
+yOffsets = []
+zDivs = []
+
+for i, line in enumerate(lines):
+    toks = line.split()
+    if i % 18 == 4:
+        assert(toks[0] == "div" and toks[1] == "z")
+        zDivs.append(int(toks[2]))
+    elif i % 18 == 5:
+        assert(toks[0] == "add" and toks[1] == "x" and toks[2] != "z")
+        xOffsets.append(int(toks[2]))
+    elif i % 18 == 15:
+        assert(toks[0] == "add" and toks[1] == "y")
+        yOffsets.append(int(toks[2]))
+    else: assert(line == refSeq[i % 18])
+
+
+# def forward(i,z,w):
+#     return z//zDivs[i] if z % 26 + xOffsets[i] == w else z//zDivs[i] * 26 + yOffsets[i] + w
+def forward(i,z,w):
+    if z % 26 + xOffsets[i] == w:
+        assert(xOffsets[i] < 10)
+        return z//zDivs[i]
+    return z//zDivs[i] * 26 + yOffsets[i] + w if xOffsets[i] >= 10 else None
+
+costToLevelZ = dict()
+
+def search(z, level, cost, path):
+    if (z,level) in costToLevelZ and costToLevelZ[(z,level)][0] > cost:
         return
-    costMap[p] = cost
-    for i, pos, c in genMoves(p):
-        nBors = list(p[4*(i // 4):(4 + 4*(i // 4))])
-        nBors[i % 4] = pos
-        pNew = p[:4*(i // 4)] + tuple(sorted(nBors)) + p[(4 + 4*(i // 4)):]
+    costToLevelZ[(z,level)] = cost, path
+    # if (level >= 7):
+    if (level == len(zDivs)):
+        # if cost < 15:
+        #     print(path, cost)
+        return
+    
+    for n in range(1,10):
+        newZ = forward(level,z,n)
+        if newZ != None:
+            search(newZ, level + 1, cost + n, path + [n])
+    
 
-        search(pNew, cost + c)
+search(0, 0, 0, [])
+
+for k,v in costToLevelZ.items():
+    if k[1] == len(zDivs):
+        print(k,v)
+
+# n2ValidZ = [{k : [] for k in range(1,10)} for i in range(len(zDivs))]
+# n2ValidZ[13] ={1: [13],
+#  2: [14],
+#  3: [15],
+#  4: [16],
+#  5: [17],
+#  6: [18],
+#  7: [19],
+#  8: [20],
+#  9: [21]}
+
+# Last 
+# for n in range(1, 10):
+#     # for x in range(-100, 100):
+#     x, y = 0,0
+#     startZ = 0
+#     for z in range(startZ, searchN):     
+#         if forward(len(zDivs)-1, z,n) == 0:
+#             # print("Found at N ", n,x,y,z)
+#             n2ValidZ[-1][n].append(z)
+#             startZ = z
+#             break
+
+   
+# for i in range(len(zDivs) - 2, -1, -1):
+#     print("opSeq number ", i)
+#     lastValid = n2ValidZ[i+1]
+#     for n in range(1, 10):
+#         x, y = 0,0
+#         if i == 0:
+#             z = 0
+#             outZ = forward(i,z,n)
+#             if outZ in lastValid[n]:
+#                 n2ValidZ[i][n].append(z)
+#         else:
+#             for validN, validZ in lastValid.items():
+#                 for z in inverseX0(i, validZ[0]):
+#                     outZ = forward(i,z,n)
+#                     for v in lastValid.values():
+#                         if outZ in v:
+#                             n2ValidZ[i][n].append(z)
+#                 for z in inverseX1(i, validZ[0],n): 
+#                     outZ = forward(i,z,n)
+#                     for v in lastValid.values():
+#                         if outZ in v:
+#                             n2ValidZ[i][n].append(z)
+                
+# opSeqs = []
+# for i, line in enumerate(lines):
+#     toks = line.split()
+#     if toks[0] == "inp":
+#         opSeqs.append([])
+#         foundMulY0 = False
+#     else:
+#         if lines[i-1].split()[0] == "inp":
+#             assert(toks[0] == "mul" and toks[1] == "x" and toks[2] == "0")
+#             continue
+#         if foundMulY0:
+#             opSeqs[-1].append((ops[toks[0]], var2Idx[toks[1]], toks[2] if toks[2] in var2Idx else int(toks[2])))
+#         if not foundMulY0 and toks[1] == "y":
+#             assert(toks[0] == "mul" and toks[2] == "0")
+#             prevToks = lines[i-1].split()
+#             prevToks2 = lines[i-2].split()
+#             assert(prevToks[0] == "eql" and prevToks[1] == "x" and prevToks[2] == "0")
+#             assert(prevToks2[0] == "eql" and prevToks2[1] == "x" and prevToks2[2] == "w")
+#             foundMulY0 = True
+#         if foundMulY0:
+#             assert(toks[0] != "eql" and toks[0] != "mod" and toks[0] != "div" and toks[1] != "x")
+#         if toks[0] == "add" and toks[1] == "x" and toks[2] != "z":
+#             xOffsets.append(int(toks[2]))
+#         if toks[0] == "div" and toks[1] == "z":
+#             zDivs.append(int(toks[2]))
+# lines.reverse()
+# for i, line in enumerate(lines):
+#     toks = line.split()
+#     if len(toks) == 2:
+#         occurenceVar2Deps.append((toks[1], "inp"))
+#     else:
+#         o = ops[toks[0]]
+#         occurenceVar2Deps.append((toks[1], o, toks[2] if toks[2] in var2Idx else int(toks[2])))
+# G = dict()
+
+# vLevels = [0] * 4
+# for dep in occurenceVar2Deps:
+#     sVar = dep[0]
+#     vi = var2Idx[sVar]
+#     if len(dep) == 2:
+#         G[(sVar, vLevels[vi])] = ("inp", "inp")
+#     else:
+#         rh = dep[2]
+#         if rh in var2Idx:
+#             G[(sVar, vLevels[vi])] = (dep[1], rh, vLevels[var2Idx[rh]])
+#         else:
+#             G[(sVar, vLevels[vi])] = (dep[1], rh)
+#     vLevels[vi] += 1
+
+# def forward(i,z,w):
+#     x = 0 if z % 26 + xOffsets[i] == w else 1
+#     v = [x, 0, z//zDivs[i],w]
+#     for o, vIdx, v2 in opSeqs[i]:
+#         v[vIdx] = o(v[vIdx], v[var2Idx[v2]] if v2 in var2Idx else int(v2))
+#     return v[2]
 
 
-search(startConfig, 0)
+    # for line in lines:
+    #     toks = line.split()
+    #     if toks[0] == "inp":
+    #         v[var2Idx[toks[1]]] = N[nIdx]
+    #         nIdx += 1
+    #     else:
+    #         vIdx = var2Idx[toks[1]]
+    #         v2 = toks[2]
+    #         o = ops[toks[0]]
+    #         v[vIdx] = o(v[vIdx], v[var2Idx[v2]] if v2 in var2Idx else int(v2))
+# print(v)
 
-print(costMap[(11, 15, 19, 23, 12, 16, 20, 24, 13, 17, 21, 25, 14, 18, 22, 26)])
+
+ 
+ 
+ 
+ 
+    
+# for i in range(100000):
+#     if i % 5000 == 0:
+#         print(N)
+    
+#     if forward(lines) == 0:
+#         print("Found at N ", N)
+#         break
+    
+#     for j in range(len(N) -1, -1, -1):
+#         if N[j] < 9:
+#             N[j] += 1
+#             for k in range(j+1, len(N)):
+#                 N[k] = 1
+#             break
+        
+    

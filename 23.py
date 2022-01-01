@@ -53,7 +53,7 @@ def genMoves(p):
         def addMoves(k, accCost):
             if not stepsUp == 0 and k in allowedUpperPositions:
                 moves.append((i, k, accCost))
-            if k == (goalPos0 - L + 1) * 2 and goalPos0 not in p:
+            if k == (goalPos0 - L + 1) * 2 and goalPos0 not in p: # Create move for the appropriate depth
                 if not g3:
                     moves.append((i, goalPos3, accCost + 4*c))
                 elif c3:
